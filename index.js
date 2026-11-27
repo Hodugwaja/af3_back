@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+const app = express(); // Express 객체
+
+app.use(cors()); // 미들웨어를 등록하는 함수
+app.use(express.json()); // JSON 파싱
+
 dotenv.config();
 const port = process.env.PORT;
 
@@ -16,11 +21,10 @@ app.use('/api/af3/staff/', staffRouter);
 app.use('/api/af3/product/', productRouter);
 app.use('/api/af3/pay/', payRouter);
 
-
-const app = express(); // Express 객체
-
-app.use(cors()); // 미들웨어를 등록하는 함수
-app.use(express.json()); // JSON 파싱
+if (!process.env.JWT_SECRET ||
+    process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET 설정이 필요합니다.');
+}
 
 app.get('/', (req, res) => {
     res.send(`공군부스3 백엔드 쪽임`);
