@@ -107,12 +107,17 @@ router.patch('/chpassword', authMiddleware, loginLimter, async (req, res) => {
             AND Staff_Id = ?;
         `, [currentPassword, userId]);  
 
+        if(checkPassword.length === 0 || checkPassword[0].matchPassword !== 'C'){
+            return res.status(401).json({
+                message: '현재 비밀번호가 일치하지 않습니다.'
+            });
+        }
+
         const [result] = await db.execute(
-            `UPDATE users
-                SET password_hash = ?,
-                    token_version = token_version + 1
-                WHERE id = ? AND token_version = ?`,
-            [newHash, userId, user.token_version]
+            `UPDATE Staff
+            SET Staff_password = sha2(?, 256)
+            WHERE Staff_Id = ?`,
+            [newPassword, userId]
         );
 
         if (result.affectedRows === 0) {
