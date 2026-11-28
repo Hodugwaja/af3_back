@@ -79,5 +79,62 @@ router.post('/login', loginLimter, async (req, res) => {
     }
 });
 
+router.patch('/chpassword', authMiddleware, loginLimter, async (req, res) => {
+
+    const {currentPassword, newPassword} = req.body ?? {};
+    const userId = req.user.id;
+
+    if(
+        typeof currentPassword !== 'string' ||
+        typeof newPassword !== 'string' ||
+        !currentPassword.trim() ||
+        Buffer.byteLength(currentPassword, 'utf8') > 72 ||
+        Buffer.byteLength(newPassword, 'utf8') > 72 ||
+        currentPassword === newPassword
+    ){
+        return res.status(400).json({
+            message: '잘못된 비밀번호 형식입니다.'
+        });
+    }
+
+    try {
+        const [checkPassword] = await db.query(`
+            SELECT 
+                IF(sha2(?, 256) = Staff_password, 'C', 'N') AS matchPassword
+            FROM 
+                Staff 
+            WHERE 1=1 
+            AND Staff_Id = ?;
+        `, [currentPassword, userId]);  
+
+        const [result] = await db.execute(
+            `UPDATE users
+                SET password_hash = ?,
+                    token_version = token_version + 1
+                WHERE id = ? AND token_version = ?`,
+            [newHash, userId, user.token_version]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(409).json({
+                message: '계정 정보가 변경되었습니다. 다시 로그인해주세요.'
+            });
+        }
+
+        res.json({
+            message: '비밀번호 변경 성공. 다시 로그인해주세요.'
+        });
+
+    }catch(error){
+        console.error(error);
+
+        res.status(500).json({
+            message: '서버 오류가 발생했습니다.'
+        });
+    }
+
+
+});
+
 
 export default router;
